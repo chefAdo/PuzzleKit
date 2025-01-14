@@ -147,7 +147,9 @@ public class PuzzleView: UIView {
                     // Apply border properties
                     tile.layer.borderWidth = tileBorderWidth
                     tile.layer.borderColor = tileBorderColor.cgColor
-
+                    // Assign accessibility identifier
+                    tile.accessibilityIdentifier = "tile_\(correctIndex)"
+                    
                     let panGR = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
                     tile.addGestureRecognizer(panGR)
 

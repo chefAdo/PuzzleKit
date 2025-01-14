@@ -8,7 +8,7 @@ public class PuzzleTile: UIImageView {
     private let lockedAlpha: CGFloat
     private let unlockedAlpha: CGFloat
     
-    /// A tile is "locked" if it's in the correct position.
+
     public var isLocked: Bool {
         return correctIndex == currentIndex
     }
