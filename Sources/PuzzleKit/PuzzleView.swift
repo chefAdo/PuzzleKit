@@ -4,11 +4,16 @@ import UIKit
 public class PuzzleView: UIView {
     public weak var puzzleDelegate: PuzzleViewDelegate?
 
+    // MARK: - Configuration Properties
+
     /// Grid size (3 → 3x3, 4 → 4x4, etc.)
     public var gridSize: Int = 3
 
     /// Alpha for tiles in the correct position
     public var lockedTileAlpha: CGFloat = 1.0
+
+    /// Whether haptic feedback is enabled (default: true)
+    public var isHapticFeedbackEnabled: Bool = true
 
     /// Alpha for tiles not in the correct position
     public var unlockedTileAlpha: CGFloat = 0.8
@@ -29,31 +34,138 @@ public class PuzzleView: UIView {
     private var hasLaidOutPuzzle = false
     private var isPuzzleCompleted: Bool = false
 
+    // MARK: - UI Elements for Rotation Notice
+
+    private let emojiLabel: UILabel = {
+        let label = UILabel()
+        label.text = "🔄" // Emoji for rotation
+        label.font = UIFont.systemFont(ofSize: 60)
+        label.textAlignment = .center
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private let messageLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Please rotate your phone to portrait mode"
+        label.font = UIFont.boldSystemFont(ofSize: 19)
+        label.textColor = .black
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     public override init(frame: CGRect) {
         super.init(frame: frame)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleDeviceRotation), name: UIDevice.orientationDidChangeNotification, object: nil)
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleDeviceRotation), name: UIDevice.orientationDidChangeNotification, object: nil)
     }
+
+    deinit {
+        // Remove the observer to avoid memory leaks
+        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
+    }
+ 
+
+    // MARK: - Setup UI for Rotation Notice
+    @objc private func handleDeviceRotation() {
+        if UIDevice.current.orientation.isLandscape {
+            showRotationMessage()  // Show rotation message
+            fadeOutPuzzleTiles()   // Hide puzzle tiles
+        } else if UIDevice.current.orientation.isPortrait {
+            hideRotationMessage()  // Hide the message
+            fadeInPuzzleTiles()    // Show puzzle tiles
+        }
+    }
+    private func fadeOutPuzzleTiles() {
+        UIView.animate(withDuration: 0.3) { [weak self] in
+            self?.subviews.forEach { subview in
+                if subview is PuzzleTile {
+                    subview.alpha = 0.0  // Fade out all tiles
+                }
+            }
+        }
+    }
+
+    private func fadeInPuzzleTiles() {
+        UIView.animate(withDuration: 0.3) { [weak self] in
+            self?.subviews.forEach { subview in
+                if subview is PuzzleTile {
+                    subview.alpha = 1.0  // Fade in all tiles
+                }
+            }
+        }
+    }
+
+    
+    public func showRotationMessage() {
+        guard let superview = self.superview ?? UIApplication.shared.windows.first else { return }
+
+        // Add labels if not already added
+        if emojiLabel.superview == nil {
+            superview.addSubview(emojiLabel)
+            superview.addSubview(messageLabel)
+
+            NSLayoutConstraint.activate([
+                emojiLabel.centerXAnchor.constraint(equalTo: superview.centerXAnchor),
+                emojiLabel.centerYAnchor.constraint(equalTo: superview.centerYAnchor, constant: -40),
+                messageLabel.centerXAnchor.constraint(equalTo: superview.centerXAnchor),
+                messageLabel.topAnchor.constraint(equalTo: emojiLabel.bottomAnchor, constant: 16),
+                messageLabel.leadingAnchor.constraint(equalTo: superview.leadingAnchor, constant: 16),
+                messageLabel.trailingAnchor.constraint(equalTo: superview.trailingAnchor, constant: -16)
+            ])
+        }
+
+        // Force layout pass
+        superview.layoutIfNeeded()
+
+        emojiLabel.isHidden = false
+        messageLabel.isHidden = false
+        emojiLabel.alpha = 0.0
+        messageLabel.alpha = 0.0
+
+        UIView.animate(withDuration: 0.5) {
+            self.emojiLabel.alpha = 1.0
+            self.messageLabel.alpha = 1.0
+        }
+    }
+
+    public func hideRotationMessage() {
+        UIView.animate(withDuration: 0.5, animations: {
+            self.emojiLabel.alpha = 0.0
+            self.messageLabel.alpha = 0.0
+        }) { _ in
+            self.emojiLabel.removeFromSuperview()
+            self.messageLabel.removeFromSuperview()
+        }
+    }
+
+
+
 
     // MARK: - Public API
 
-    /// Load puzzle from a direct UIImage
     public func setPuzzleImage(_ image: UIImage) {
         puzzleImage = image
         isPuzzleCompleted = false
         hasLaidOutPuzzle = false
         subviews.forEach { $0.removeFromSuperview() }
+        addSubview(emojiLabel)
+        addSubview(messageLabel)
         setNeedsLayout()
     }
 
     public func shufflePuzzle() {
- 
         viewModel?.shuffleTilesEnsuringNoInitialLock()
         layoutPuzzleTiles()
         isPuzzleCompleted = false
-
     }
 
     public func shuffleUnlockedPuzzle() {
@@ -61,12 +173,8 @@ public class PuzzleView: UIView {
         layoutPuzzleTiles()
     }
 
-    // MARK: - Public API
-
-    /// Load puzzle from a URL; if it fails, fallback image is used (if non-nil)
     public func loadPuzzle(from url: URL?, fallback: UIImage? = nil) {
         guard let url = url else {
-            // No URL, use fallback if available
             if let fallbackImage = fallback {
                 setPuzzleImage(fallbackImage)
             }
@@ -75,7 +183,6 @@ public class PuzzleView: UIView {
 
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self, let data = data, error == nil, let downloadedImage = UIImage(data: data) else {
-                // If download failed, use fallback image if available
                 DispatchQueue.main.async {
                     if let fallbackImage = fallback {
                         self?.setPuzzleImage(fallbackImage)
@@ -84,14 +191,12 @@ public class PuzzleView: UIView {
                 return
             }
 
-            // Set the downloaded image as the puzzle image
             DispatchQueue.main.async {
                 self.setPuzzleImage(downloadedImage)
             }
         }.resume()
     }
 
-    
     // MARK: - Layout
 
     public override func layoutSubviews() {
@@ -99,7 +204,6 @@ public class PuzzleView: UIView {
 
         guard let image = puzzleImage, bounds.size != .zero else { return }
 
-        // Setup tiles from the cropped and scaled image
         if !hasLaidOutPuzzle {
             setupPuzzleTiles(with: image)
             hasLaidOutPuzzle = true
@@ -107,22 +211,22 @@ public class PuzzleView: UIView {
         }
 
         layoutPuzzleTiles()
+        // Ensure labels are re-centered
+         if UIDevice.current.orientation.isLandscape {
+             showRotationMessage() // Ensures they are centered in landscape mode
+         } else if UIDevice.current.orientation.isPortrait {
+             hideRotationMessage()
+         }
     }
-
-    // MARK: - Puzzle Tiles Setup
 
     private func setupPuzzleTiles(with image: UIImage) {
         viewModel = PuzzleViewModel(gridSize: gridSize)
 
         let aspectFilledImage = image.aspectFillCropped(to: bounds.size)
-
         guard let cgImage = aspectFilledImage.cgImage else { return }
 
-        let imageWidth = CGFloat(cgImage.width)
-        let imageHeight = CGFloat(cgImage.height)
-
-        let tileWidth = imageWidth / CGFloat(gridSize)
-        let tileHeight = imageHeight / CGFloat(gridSize)
+        let tileWidth = CGFloat(cgImage.width) / CGFloat(gridSize)
+        let tileHeight = CGFloat(cgImage.height) / CGFloat(gridSize)
 
         var tiles: [PuzzleTile] = []
         var correctIndex = 0
@@ -134,7 +238,7 @@ public class PuzzleView: UIView {
                 let cropRect = CGRect(x: x, y: y, width: tileWidth, height: tileHeight)
 
                 if let croppedCGImage = cgImage.cropping(to: cropRect) {
-                    let piece = UIImage(cgImage: croppedCGImage, scale: aspectFilledImage.scale, orientation: aspectFilledImage.imageOrientation)
+                    let piece = UIImage(cgImage: croppedCGImage)
 
                     let tile = PuzzleTile(
                         image: piece,
@@ -144,15 +248,12 @@ public class PuzzleView: UIView {
                         unlockedAlpha: unlockedTileAlpha
                     )
 
-                    // Apply border properties
                     tile.layer.borderWidth = tileBorderWidth
                     tile.layer.borderColor = tileBorderColor.cgColor
-                    // Assign accessibility identifier
                     tile.accessibilityIdentifier = "tile_\(correctIndex)"
-                    
+
                     let panGR = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
                     tile.addGestureRecognizer(panGR)
-
                     tiles.append(tile)
                 }
                 correctIndex += 1
@@ -161,7 +262,6 @@ public class PuzzleView: UIView {
 
         viewModel.setTiles(tiles)
         viewModel.shuffleTilesEnsuringNoInitialLock()
-
         for tile in viewModel.tiles {
             addSubview(tile)
         }
@@ -192,30 +292,32 @@ public class PuzzleView: UIView {
     // MARK: - Gesture Handling
 
     @objc private func handlePan(_ gr: UIPanGestureRecognizer) {
-        guard let movedTile = gr.view as? PuzzleTile else { return }
-
-        // Prevent movement if the puzzle is completed
-        if isPuzzleCompleted { return }
-
+        guard let movedTile = gr.view as? PuzzleTile, !isPuzzleCompleted else { return }
         if movedTile.isLocked && !canMoveLockedTiles { return }
 
         switch gr.state {
-        case .began, .changed:
+        case .began:
+            if isHapticFeedbackEnabled {
+                let selectionGenerator = UISelectionFeedbackGenerator()
+                selectionGenerator.selectionChanged()
+            }
+
+        case .changed:
             let translation = gr.translation(in: self)
-            movedTile.center = CGPoint(
-                x: movedTile.center.x + translation.x,
-                y: movedTile.center.y + translation.y
-            )
+            movedTile.center = CGPoint(x: movedTile.center.x + translation.x, y: movedTile.center.y + translation.y)
             gr.setTranslation(.zero, in: self)
 
         case .ended, .cancelled:
             if let targetTile = findBestOverlapCandidate(for: movedTile), targetTile != movedTile {
                 swapTiles(movedTile, with: targetTile)
+                if isHapticFeedbackEnabled && !movedTile.isLocked {
+                    let impactGenerator = UIImpactFeedbackGenerator(style: .heavy)
+                    impactGenerator.impactOccurred()
+                }
             }
             layoutPuzzleTiles()
-
             if viewModel.isPuzzleComplete() {
-                isPuzzleCompleted = true  // Disable tile movements
+                isPuzzleCompleted = true
                 puzzleDelegate?.puzzleViewDidComplete(self)
             }
 
@@ -223,7 +325,6 @@ public class PuzzleView: UIView {
             break
         }
     }
-
 
     private func findBestOverlapCandidate(for movedTile: PuzzleTile) -> PuzzleTile? {
         guard let vm = viewModel else { return nil }
@@ -267,7 +368,10 @@ public class PuzzleView: UIView {
             gen.impactOccurred()
         }
     }
+
+ 
 }
+ 
 
 // MARK: - Extension for Aspect-Fill Cropping
 extension UIImage {
