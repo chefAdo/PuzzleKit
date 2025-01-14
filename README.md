@@ -14,7 +14,9 @@ Welcome to **PuzzleKit** – a **powerful and customizable puzzle game framework
   - Direct `UIImage` input.
   - Load from **URL** with **fallback images**.
 - **Dynamic gestures:** Drag and swap tiles with haptic feedback.
+- **Rotation support:** Handles device rotation with a **fade-out effect** in landscape and **informative labels**.
 - **Completion detection:** Notify when the puzzle is completed and optionally track the **completion time**.
+- **Haptic Feedback Settings:** Enable or disable continuous and strong haptic feedback.
 
 ---
 
@@ -46,6 +48,7 @@ puzzleView.tileBorderWidth = 2.0
 puzzleView.tileBorderColor = .white
 puzzleView.unlockedTileAlpha = 0.8
 puzzleView.lockedTileAlpha = 1.0
+puzzleView.isHapticFeedbackEnabled = true  // Enable or disable haptic feedback
 ```
 
 ### **3. Load Puzzle Image**
@@ -75,6 +78,33 @@ extension MyViewController: PuzzleViewDelegate {
     }
 }
 ```
+
+---
+
+## **📱 Rotation Support**
+- The puzzle automatically detects when the device is rotated to **landscape mode** and fades out the puzzle tiles.
+- A centered **emoji label** and **message label** will be displayed asking the user to rotate back to **portrait mode**.
+- When the device returns to **portrait mode**, the puzzle tiles fade back in.
+
+**Example configuration:**
+```swift
+puzzleView.showRotationMessage()  // Show rotation message with labels
+puzzleView.hideRotationMessage()  // Hide rotation message and show tiles again
+```
+
+---
+
+## **⚙️ Configuration Options**
+
+| **Option**         | **Type**   | **Description**                                      | **Default** |
+|--------------------|------------|----------------------------------------------------|-------------|
+| `gridSize`         | `Int`      | Grid size for the puzzle (`3` for `3x3`, etc.).    | `3`         |
+| `lockedTileAlpha`  | `CGFloat`  | Alpha for tiles in the correct position.           | `1.0`       |
+| `unlockedTileAlpha`| `CGFloat`  | Alpha for tiles not in the correct position.       | `0.8`       |
+| `tileBorderWidth`  | `CGFloat`  | Border width for tiles.                            | `0.0`       |
+| `tileBorderColor`  | `UIColor`  | Border color for tiles.                            | `.clear`    |
+| `canMoveLockedTiles` | `Bool`   | Whether locked tiles can be moved.                 | `false`     |
+| `isHapticFeedbackEnabled` | `Bool` | Enable or disable haptic feedback.                | `true`      |
 
 ---
 
@@ -116,22 +146,9 @@ extension PuzzleViewController: PuzzleViewDelegate {
 
 ---
 
-## **⚙️ Configuration Options**
-
-| **Option**         | **Type**   | **Description**                                      | **Default** |
-|--------------------|------------|----------------------------------------------------|-------------|
-| `gridSize`         | `Int`      | Grid size for the puzzle (`3` for `3x3`, etc.).    | `3`         |
-| `lockedTileAlpha`  | `CGFloat`  | Alpha for tiles in the correct position.           | `1.0`       |
-| `unlockedTileAlpha`| `CGFloat`  | Alpha for tiles not in the correct position.       | `0.8`       |
-| `tileBorderWidth`  | `CGFloat`  | Border width for tiles.                            | `0.0`       |
-| `tileBorderColor`  | `UIColor`  | Border color for tiles.                            | `.clear`    |
-| `canMoveLockedTiles` | `Bool`   | Whether locked tiles can be moved.                 | `false`     |
-
----
-
 ## **📃 License**
 
-PuzzleKit is available under the **I have no License**. 
+PuzzleKit is available under the **I have no License :D**.
 
 ---
 
