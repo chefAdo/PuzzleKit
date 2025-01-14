@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/chefAdo/PuzzleKit",
       "state" : {
-        "revision" : "9a921d3c458898a1b043f2d317ce37af5e1418c5",
-        "version" : "1.0.0"
+        "revision" : "0df0d4fc3bea2bc05507c93bcb0d43a1ed12cde9",
+        "version" : "1.1.0"
       }
     }
   ],
