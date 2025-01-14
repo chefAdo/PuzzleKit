@@ -18,16 +18,6 @@ Welcome to **PuzzleKit** – a **powerful and customizable puzzle game framework
 
 ---
 
-## **📸 Demo**
-
-Check out a snapshot of PuzzleKit in action:
-
-```
-🖼️ [Image Placeholder]
-```
-
----
-
 ## **🛠️ Installation**
 
 You can add PuzzleKit using **Swift Package Manager (SPM)**:
@@ -141,7 +131,7 @@ extension PuzzleViewController: PuzzleViewDelegate {
 
 ## **📃 License**
 
-PuzzleKit is available under the **MIT license**. See [LICENSE](./LICENSE) for more information.
+PuzzleKit is available under the **I have no License**. 
 
 ---
 
